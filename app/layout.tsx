@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Gelasio, Noto_Sans } from "next/font/google";
 import { EvmProvider } from "@/components/providers/EvmProvider";
 import { ToastProvider } from "@/components/ui/Toast";
-import { WrongNetworkBar } from "@/components/botchain/WrongNetworkBar";
+import WrongNetworkBar from "@/components/botchain/WrongNetworkBar";
 import { app } from "@/lib/app-config";
 import "./globals.css";
 

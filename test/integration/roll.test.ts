@@ -7,6 +7,7 @@ import {
   parseEther,
   formatEther,
   type Address,
+  defineChain,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ROLL_ABI } from "../../lib/botchain/abi";
@@ -15,6 +16,15 @@ import { resolve } from "path";
 
 const ANVIL_PORT = 8653;
 const RPC_URL = `http://127.0.0.1:${ANVIL_PORT}`;
+
+const localChain = defineChain({
+  id: 31337,
+  name: "Anvil Local",
+  nativeCurrency: { name: "BOT", symbol: "BOT", decimals: 18 },
+  rpcUrls: {
+    default: { http: [RPC_URL] },
+  },
+});
 
 // Anvil default accounts
 const TREASURER_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // Account 0
@@ -30,21 +40,25 @@ describe("Roll integration test (Anvil)", () => {
   let contractAddress: Address;
 
   const publicClient = createPublicClient({
+    chain: localChain,
     transport: http(RPC_URL),
   });
 
   const treasurerClient = createWalletClient({
     account: treasurerAccount,
+    chain: localChain,
     transport: http(RPC_URL),
   });
 
   const aliceClient = createWalletClient({
     account: aliceAccount,
+    chain: localChain,
     transport: http(RPC_URL),
   });
 
   const bobClient = createWalletClient({
     account: bobAccount,
+    chain: localChain,
     transport: http(RPC_URL),
   });
 
@@ -153,13 +167,11 @@ describe("Roll integration test (Anvil)", () => {
     expect(standingBob0[2]).toBe(2n);
 
     // 4. Advance time by 4 days (4 periods)
-    await publicClient.request({
-      // @ts-expect-error Anvil RPC method
+    await (publicClient.request as any)({
       method: "evm_increaseTime",
       params: [86400 * 4],
     });
-    await publicClient.request({
-      // @ts-expect-error Anvil RPC method
+    await (publicClient.request as any)({
       method: "evm_mine",
       params: [],
     });

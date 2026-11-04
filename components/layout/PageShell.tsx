@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { ConnectButton } from "../botchain/ConnectButton";
+import ConnectButton from "../ui/ConnectButton";
 import BuiltOnBotChain from "../botchain/BuiltOnBotChain";
 import { footerLinks } from "@/lib/botchain/chain";
 
