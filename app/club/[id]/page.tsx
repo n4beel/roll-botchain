@@ -4,14 +4,15 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { formatEther, isAddress, type Address } from "viem";
-import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
+import { useWriteContract } from "@/lib/useChainWrite";
 import PageShell from "@/components/layout/PageShell";
 import Panel from "@/components/ui/Panel";
 import Button from "@/components/ui/Button";
 import Wall, { MemberData } from "@/components/pigeonholes/Wall";
 import { ROLL_ABI } from "@/lib/botchain/abi";
 import { getDeployment, isDeployed } from "@/lib/botchain/deployment";
-import { isBotChainId } from "@/lib/botchain/chain";
+import { activeBotChain } from "@/lib/botchain/chain";
 import {
   ClubInfo,
   StandingInfo,
@@ -28,10 +29,10 @@ export default function ClubDetailPage() {
   const clubId = BigInt(rawId || "0");
 
   const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
-  const chainId = publicClient?.chain?.id;
-  const deployed = chainId && isBotChainId(chainId) && isDeployed(chainId);
+  const publicClient = usePublicClient({ chainId: activeBotChain.id });
+  const { writeContractAsync } = useWriteContract();
+  const chainId = activeBotChain.id;
+  const deployed = isDeployed(chainId);
   const contractAddress = deployed ? getDeployment(chainId).address : undefined;
 
   const [club, setClub] = useState<ClubInfo | null>(null);
@@ -161,14 +162,14 @@ export default function ClubDetailPage() {
   // Payment Handler
   async function handlePay(e: React.FormEvent) {
     e.preventDefault();
-    if (!walletClient || !publicClient || !contractAddress || !club) return;
+    if (!publicClient || !contractAddress || !club) return;
 
     setPayError(null);
     setPaying(true);
 
     try {
       const value = club.dues * BigInt(periodsToPay);
-      const hash = await walletClient.writeContract({
+      const hash = await writeContractAsync({
         address: contractAddress,
         abi: ROLL_ABI,
         functionName: "pay",
@@ -190,7 +191,7 @@ export default function ClubDetailPage() {
   // Treasurer Hand Over Handler
   async function handleHandOver(e: React.FormEvent) {
     e.preventDefault();
-    if (!walletClient || !publicClient || !contractAddress || !club) return;
+    if (!publicClient || !contractAddress || !club) return;
     if (!isAddress(newTreasurer)) {
       setActionError("Please enter a valid Ethereum address.");
       return;
@@ -200,7 +201,7 @@ export default function ClubDetailPage() {
     setHandingOver(true);
 
     try {
-      const hash = await walletClient.writeContract({
+      const hash = await writeContractAsync({
         address: contractAddress,
         abi: ROLL_ABI,
         functionName: "handOver",
@@ -219,13 +220,13 @@ export default function ClubDetailPage() {
 
   // Treasurer Withdraw Handler
   async function handleWithdraw() {
-    if (!walletClient || !publicClient || !contractAddress) return;
+    if (!publicClient || !contractAddress) return;
 
     setActionError(null);
     setWithdrawing(true);
 
     try {
-      const hash = await walletClient.writeContract({
+      const hash = await writeContractAsync({
         address: contractAddress,
         abi: ROLL_ABI,
         functionName: "withdraw",
@@ -243,13 +244,13 @@ export default function ClubDetailPage() {
 
   // Treasurer Remove Handler
   async function handleRemove(memberAddr: string) {
-    if (!walletClient || !publicClient || !contractAddress || !club) return;
+    if (!publicClient || !contractAddress || !club) return;
 
     setActionError(null);
     setRemovingAddr(memberAddr);
 
     try {
-      const hash = await walletClient.writeContract({
+      const hash = await writeContractAsync({
         address: contractAddress,
         abi: ROLL_ABI,
         functionName: "remove",

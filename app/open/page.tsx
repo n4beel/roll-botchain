@@ -3,22 +3,23 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseEther } from "viem";
-import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
+import { useWriteContract } from "@/lib/useChainWrite";
 import PageShell from "@/components/layout/PageShell";
 import Panel from "@/components/ui/Panel";
 import Button from "@/components/ui/Button";
 import { ROLL_ABI } from "@/lib/botchain/abi";
 import { getDeployment, isDeployed } from "@/lib/botchain/deployment";
-import { isBotChainId } from "@/lib/botchain/chain";
+import { activeBotChain } from "@/lib/botchain/chain";
 import { humanizeRollError } from "@/lib/errors";
 
 export default function OpenClubPage() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
-  const chainId = publicClient?.chain?.id;
-  const deployed = chainId && isBotChainId(chainId) && isDeployed(chainId);
+  const { isConnected } = useAccount();
+  const publicClient = usePublicClient({ chainId: activeBotChain.id });
+  const { writeContractAsync } = useWriteContract();
+  const chainId = activeBotChain.id;
+  const deployed = isDeployed(chainId);
   const contractAddress = deployed ? getDeployment(chainId).address : undefined;
 
   const [name, setName] = useState("");
@@ -30,7 +31,7 @@ export default function OpenClubPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!walletClient || !publicClient || !contractAddress) return;
+    if (!publicClient || !contractAddress) return;
 
     setError(null);
     setSubmitting(true);
@@ -59,14 +60,14 @@ export default function OpenClubPage() {
       const block = await publicClient.getBlock();
       const startsAt = block.timestamp + BigInt(Math.round(lDays * 86400));
 
-      const hash = await walletClient.writeContract({
+      const hash = await writeContractAsync({
         address: contractAddress,
         abi: ROLL_ABI,
         functionName: "open",
         args: [name.trim(), duesWei, periodSecs, startsAt],
       });
 
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      await publicClient.waitForTransactionReceipt({ hash });
       // Find event or fetch latest club id
       const totalClubs = (await publicClient.readContract({
         address: contractAddress,

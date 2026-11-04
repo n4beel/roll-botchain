@@ -9,14 +9,14 @@ import Panel from "@/components/ui/Panel";
 import Button from "@/components/ui/Button";
 import { ROLL_ABI } from "@/lib/botchain/abi";
 import { getDeployment, isDeployed } from "@/lib/botchain/deployment";
-import { isBotChainId } from "@/lib/botchain/chain";
+import { activeBotChain } from "@/lib/botchain/chain";
 import { ClubInfo, currentPeriod } from "@/lib/roll";
 
 export default function HomePage() {
   const { address } = useAccount();
-  const publicClient = usePublicClient();
-  const chainId = publicClient?.chain?.id;
-  const deployed = chainId && isBotChainId(chainId) && isDeployed(chainId);
+  const publicClient = usePublicClient({ chainId: activeBotChain.id });
+  const chainId = activeBotChain.id;
+  const deployed = isDeployed(chainId);
   const contractAddress = deployed ? getDeployment(chainId).address : undefined;
 
   const [clubs, setClubs] = useState<ClubInfo[]>([]);
