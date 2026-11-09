@@ -13,6 +13,9 @@ import { getDeployment, isDeployed } from "@/lib/botchain/deployment";
 import { activeBotChain } from "@/lib/botchain/chain";
 import { humanizeRollError } from "@/lib/errors";
 
+const START_MARGIN_SECS = BigInt(300);
+const MAX_LEAD_SECS = BigInt(90 * 86400);
+
 export default function OpenClubPage() {
   const router = useRouter();
   const { isConnected } = useAccount();
@@ -57,8 +60,15 @@ export default function OpenClubPage() {
         throw new Error("Start lead time must be between 0 and 90 days.");
       }
 
+      // The contract rejects a start time that is already in the past when the transaction is mined, and the latest
+      // block is always a few seconds old by then (plus however long the wallet prompt stays open). So the start is
+      // never "now": it gets a margin, and a club with no delay opens a few minutes ahead. Nothing is lost by that:
+      // dues can be paid before the start, and count towards the first period.
       const block = await publicClient.getBlock();
-      const startsAt = block.timestamp + BigInt(Math.round(lDays * 86400));
+      const lead = BigInt(Math.round(lDays * 86400));
+      const cap = block.timestamp + MAX_LEAD_SECS; // the contract allows at most 90 days from the block it mines in
+      const wanted = block.timestamp + START_MARGIN_SECS + lead;
+      const startsAt = wanted > cap ? cap : wanted;
 
       const hash = await writeContractAsync({
         address: contractAddress,
@@ -171,7 +181,7 @@ export default function OpenClubPage() {
                 className="w-full px-3 py-2 bg-[var(--bg-surface)] border-2 border-[var(--border-default)] text-sm focus:border-[var(--border-strong)] outline-none"
               />
               <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                0 = starts immediately. Range: 0 to 90 days.
+                0 = opens straight away (the first period starts about five minutes after you confirm, so the transaction has time to land; you can pay dues from the moment it is open). Range: 0 to 90 days.
               </p>
             </div>
 

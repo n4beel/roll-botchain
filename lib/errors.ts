@@ -5,7 +5,7 @@ export function humanizeRollError(err: unknown): string {
     return "Invalid parameters. Please check the name length, dues amount, and period duration.";
   }
   if (msg.includes("BadStart")) {
-    return "Start date must be between now and 90 days in the future.";
+    return "The start time had already passed when the transaction was mined. Try again; if the wallet prompt stayed open for a long time, confirm sooner.";
   }
   if (msg.includes("BadPeriods")) {
     return "You must pay between 1 and 3 periods at a time.";
